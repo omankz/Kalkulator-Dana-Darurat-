@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator Dana Darurat</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    html, body {
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    }
+
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-xl w-full relative">
+
+    <header class="mb-6">
+      <h1 class="text-3xl font-extrabold text-center text-blue-600">Kalkulator Dana Darurat</h1>
+      <p class="text-center text-gray-600 mt-2">Hitung target dana darurat berdasarkan profil dan pengeluaran Anda.</p>
+    </header>
+
+    <form id="emergencyForm" novalidate>
+      <fieldset class="space-y-6">
+        <legend class="sr-only">Data input dana darurat</legend>
+
+        <div>
+          <label for="profil" class="block text-sm font-medium text-gray-700">Profil Anda</label>
+          <select id="profil" name="profil" required class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <option value="single">Single (Belum Menikah)</option>
+            <option value="menikah_tanpa_anak">Menikah (Belum Punya Anak)</option>
+            <option value="menikah_dengan_anak">Menikah (Sudah Punya Anak)</option>
+          </select>
+          <p class="mt-2 text-xs text-gray-500">Standar umum: 3/6/12 bulan pengeluaran.</p>
+        </div>
+
+        <div>
+          <label for="pendapatan" class="block text-sm font-medium text-gray-700">Pendapatan Bulanan (Rp) 
+          <input type="text" id="pendapatan" name="pendapatan" inputmode="numeric" autocomplete="off" placeholder="Contoh: 8.000.000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+          <p class="mt-2 text-xs text-gray-500">Dipakai bila Anda mengisi persentase menabung di bawah.</p>
+        </div>
+
+        <div>
+          <label for="pengeluaran" class="block text-sm font-medium text-gray-700">Rata-rata Pengeluaran Bulanan (Rp)</label>
+          <input type="text" id="pengeluaran" name="pengeluaran" inputmode="numeric" autocomplete="off" required placeholder="Contoh: 5.000.000" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+          <p class="mt-2 text-xs text-gray-500">Wajib diisi – digunakan untuk menghitung target dana darurat.</p>
+        </div>
+
+        <div>
+          <label for="savingPercent" class="block text-sm font-medium text-gray-700">Persentase Menabung dari Pendapatan (%) <span class="text-gray-400 font-normal">– opsional</span></label>
+          <input type="number" id="savingPercent" name="savingPercent" min="1" max="100" step="1" inputmode="numeric" placeholder="Misal: 10" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+          <p class="mt-2 text-xs text-gray-500">Bila diisi bersama pendapatan, akan dihitung estimasi waktu mencapai target (bulan).</p>
+        </div>
+      </fieldset>
+
+      <p id="errorPesan" class="text-red-600 text-sm text-center mt-4 hidden" aria-live="polite"></p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        <button type="submit" id="hitungButton" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors">Hitung</button>
+        <button type="reset" id="resetButton" class="w-full bg-gray-200 text-gray-900 p-3 rounded-lg font-semibold text-lg hover:bg-gray-300 transition-colors">Reset</button>
+      </div>
+    </form>
+
+    <section id="hasilKalkulasi" class="hidden mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg text-center" aria-live="polite">
+      <h2 class="text-lg font-semibold text-gray-800">Target Ideal Dana Darurat</h2>
+      <p id="jumlahDana" class="text-4xl font-extrabold text-blue-700 my-2">Rp 0</p>
+      <p id="penjelasan" class="text-base text-gray-700">(Perhitungan)</p>
+      <p id="rumus" class="mt-2 text-sm text-gray-600">—</p>
+
+      <div id="estimasiWaktuBox" class="hidden mt-6 text-left bg-white/60 rounded-lg p-4">
+        <h3 class="font-semibold text-gray-800">Estimasi Waktu Mencapai Target</h3>
+        <p id="estimasiWaktu" class="mt-1 text-gray-700">—</p>
+        <p id="simulasiTabungan" class="mt-1 text-sm text-gray-600">—</p>
+      </div>
+    </section>
+
+    <aside class="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+      <h3 class="font-semibold text-gray-800">✨ Saran Penyimpanan ✨</h3>
+      <p class="mt-1 text-gray-700 text-sm leading-relaxed">Simpan dana darurat di rekening bank terpisah, utamakan likuiditas dan keamanan; bunga kecil tidak masalah, yang penting mudah dicairkan saat darurat.</p>
+    </aside>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      function formatRupiah(str) {
+        const digits = (str || '').toString().replace(/[^0-9]/g, '');
+        if (!digits) return '';
+        return new Intl.NumberFormat('id-ID').format(digits);
+      }
+      function parseRupiah(str) {
+        const digits = (str || '').toString().replace(/[^0-9]/g, '');
+        const n = Number(digits);
+        return Number.isFinite(n) ? n : 0;
+      }
+      function formatCurrencyIDR(n) {
+        return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0, maximumFractionDigits:0 }).format(n || 0);
+      }
+
+      const form = document.getElementById('emergencyForm');
+      const profilEl = document.getElementById('profil');
+      const pendapatanEl = document.getElementById('pendapatan');
+      const pengeluaranEl = document.getElementById('pengeluaran');
+      const savingPercentEl = document.getElementById('savingPercent');
+
+      const errorPesan = document.getElementById('errorPesan');
+      const hasilKalkulasi = document.getElementById('hasilKalkulasi');
+      const jumlahDana = document.getElementById('jumlahDana');
+      const penjelasan = document.getElementById('penjelasan');
+      const rumus = document.getElementById('rumus');
+      const estimasiWaktuBox = document.getElementById('estimasiWaktuBox');
+      const estimasiWaktu = document.getElementById('estimasiWaktu');
+      const simulasiTabungan = document.getElementById('simulasiTabungan');
+
+      const PROFILE = {
+        single: { months: 3, label: '3 bulan pengeluaran' },
+        menikah_tanpa_anak: { months: 6, label: '6 bulan pengeluaran' },
+        menikah_dengan_anak: { months: 12, label: '12 bulan pengeluaran' },
+      };
+
+      [pendapatanEl, pengeluaranEl].forEach((input) => {
+        input.addEventListener('input', (e) => {
+          const cursor = e.target.selectionStart;
+          const prevLen = e.target.value.length;
+          e.target.value = formatRupiah(e.target.value);
+          const nextLen = e.target.value.length;
+          e.target.selectionStart = e.target.selectionEnd = Math.max(0, cursor + (nextLen - prevLen));
+        });
+      });
+
+      function showError(msg) {
+        hasilKalkulasi.classList.add('hidden');
+        errorPesan.textContent = msg;
+        errorPesan.classList.remove('hidden');
+      }
+      function hideError() {
+        errorPesan.classList.add('hidden');
+        errorPesan.textContent = '';
+      }
+      function renderResult(total, monthsLabel, monthlyExpense) {
+        jumlahDana.textContent = formatCurrencyIDR(total);
+        penjelasan.textContent = `(${monthsLabel})`;
+        if (monthlyExpense) {
+          rumus.textContent = `${formatCurrencyIDR(monthlyExpense)} × ${monthsLabel.replace('bulan pengeluaran', 'bulan')} = ${formatCurrencyIDR(total)}`;
+        } else {
+          rumus.textContent = '—';
+        }
+        hasilKalkulasi.classList.remove('hidden');
+      }
+      function renderSavingEstimate(total, income, percent) {
+        const p = Number(percent);
+        const monthlySave = (Number(income) || 0) * (p / 100);
+        if (!income || !p || monthlySave <= 0) {
+          estimasiWaktuBox.classList.add('hidden');
+          estimasiWaktu.textContent = '';
+          simulasiTabungan.textContent = '';
+          return;
+        }
+        const months = Math.ceil(total / monthlySave);
+        estimasiWaktu.textContent = `Dengan menabung ${p}% dari pendapatan per bulan (~ ${formatCurrencyIDR(monthlySave)}), Anda butuh sekitar ${months} bulan untuk mencapai target.`;
+        simulasiTabungan.textContent = `${formatCurrencyIDR(monthlySave)} per bulan × ${months} bulan ≈ ${formatCurrencyIDR(monthlySave * months)}.`;
+        estimasiWaktuBox.classList.remove('hidden');
+      }
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        hideError();
+
+        const chosen = PROFILE[profilEl.value];
+        const pengeluaran = parseRupiah(pengeluaranEl.value);
+        if (!chosen) { showError('Pilih profil terlebih dahulu.'); return; }
+        if (!pengeluaran) { showError('Harap masukkan jumlah pengeluaran yang valid.'); return; }
+
+        const total = chosen.months * pengeluaran;
+        renderResult(total, chosen.label, pengeluaran);
+
+        const pendapatan = parseRupiah(pendapatanEl.value);
+        const savingPercent = Number(savingPercentEl.value);
+        renderSavingEstimate(total, pendapatan, savingPercent);
+      });
+
+      form.addEventListener('reset', () => {
+        setTimeout(() => {
+          hideError();
+          hasilKalkulasi.classList.add('hidden');
+          estimasiWaktuBox.classList.add('hidden');
+          jumlahDana.textContent = 'Rp 0';
+          penjelasan.textContent = '(Perhitungan)';
+          rumus.textContent = '—';
+          estimasiWaktu.textContent = '';
+          simulasiTabungan.textContent = '';
+        }, 0);
+      });
+    });
+  </script>
+</body>
+</html>
